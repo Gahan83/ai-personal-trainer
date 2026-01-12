@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
     
+    # AI Settings
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"  # Using mini model for cost efficiency
+    
     class Config:
         env_file = ".env"
 

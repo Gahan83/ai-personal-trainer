@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+from app.services.ai_service import ai_service
 
 router = APIRouter()
 
@@ -19,6 +20,12 @@ class WorkoutCreate(BaseModel):
     exercises: List[Exercise]
     difficulty: str = "beginner"  # beginner, intermediate, advanced
     estimated_duration: int  # in minutes
+
+class AIGeneratedWorkoutRequest(BaseModel):
+    goal: str  # e.g., "build muscle", "lose weight", "improve endurance"
+    fitness_level: str = "beginner"  # beginner, intermediate, advanced
+    duration: int  # in minutes
+    preferences: Optional[str] = None  # additional preferences
 
 class Workout(BaseModel):
     id: int
@@ -101,3 +108,52 @@ async def get_workout(workout_id: int):
         "created_at": "2024-01-01T10:00:00",
         "updated_at": "2024-01-01T10:00:00"
     }
+
+@router.post("/ai/generate", response_model=dict, summary="Generate AI Workout", description="Generate a personalized workout using AI")
+async def generate_ai_workout(request: AIGeneratedWorkoutRequest):
+    """
+    Generate a personalized workout using AI
+    
+    This endpoint demonstrates:
+    - Using AI to generate content
+    - Taking user inputs (goal, fitness level, duration)
+    - Getting structured output from AI
+    
+    - **goal**: Fitness goal (e.g., "build muscle", "lose weight")
+    - **fitness_level**: User's fitness level (beginner, intermediate, advanced)
+    - **duration**: Workout duration in minutes
+    - **preferences**: Additional preferences (optional)
+    
+    Returns:
+        AI-generated workout plan
+    """
+    try:
+        # Call the AI service to generate a workout
+        ai_workout = await ai_service.generate_workout_suggestion(
+            goal=request.goal,
+            fitness_level=request.fitness_level,
+            duration=request.duration,
+            preferences=request.preferences
+        )
+        
+        # The AI service returns a dictionary with the workout
+        # We can optionally transform it to match our Workout model format
+        return {
+            "success": True,
+            "workout": ai_workout,
+            "generated_by": "AI",
+            "message": "Workout generated successfully using AI"
+        }
+        
+    except ValueError as e:
+        # Handle case where API key is not set
+        raise HTTPException(
+            status_code=503,
+            detail=f"AI service is not available: {str(e)}. Please configure OPENAI_API_KEY in your .env file."
+        )
+    except Exception as e:
+        # Handle other errors
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate workout: {str(e)}"
+        )
