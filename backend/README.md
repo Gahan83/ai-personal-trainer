@@ -35,13 +35,24 @@ FastAPI-based backend for the AI Personal Trainer application.
 
 ### Running the Server
 
-```bash
-# Development mode with auto-reload
-uvicorn app.main:app --reload
+**Important:** Activate the virtual environment first, or `uvicorn` will not be found.
 
-# Production mode
+```bash
+# 1. Go to backend directory
+cd backend
+
+# 2. Activate the virtual environment (required!)
+source venv/bin/activate   # On Windows: venv\Scripts\activate
+
+# 3. Start the server
+# Development mode with auto-reload
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Or production mode (no auto-reload)
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
+
+After activation, your prompt will show `(venv)` so you know the environment is active.
 
 ### Database Migrations
 

@@ -11,10 +11,14 @@ Learning Points:
 4. Response parsing and validation
 """
 
-from openai import OpenAI
 from typing import Optional, List, Dict, Any
 import json
 from app.core.config import settings
+
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None  # type: ignore
 
 
 class AIService:
@@ -34,11 +38,11 @@ class AIService:
         
         Note: Make sure OPENAI_API_KEY is set in your .env file
         """
-        self.api_key = settings.OPENAI_API_KEY
-        self.model = settings.OPENAI_MODEL
+        self.api_key = getattr(settings, "OPENAI_API_KEY", "") or ""
+        self.model = getattr(settings, "OPENAI_MODEL", "gpt-4o-mini")
         
-        # Initialize client only if API key is provided
-        if self.api_key:
+        # Initialize client only if OpenAI is installed and API key is provided
+        if OpenAI and self.api_key:
             self.client = OpenAI(api_key=self.api_key)
         else:
             self.client = None
@@ -68,8 +72,12 @@ class AIService:
         - Temperature controls creativity vs consistency
         - max_tokens limits response length
         """
+        if not OpenAI:
+            raise ValueError(
+                "OpenAI package is not installed. Run: pip install openai"
+            )
         if not self.client:
-            raise ValueError("OpenAI API key is not configured. Please set OPENAI_API_KEY in your .env file")
+            raise ValueError("OpenAI API key is not configured. Set OPENAI_API_KEY in your .env file")
         
         try:
             messages = []
