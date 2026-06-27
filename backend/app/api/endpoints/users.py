@@ -1,81 +1,61 @@
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, EmailStr
-from typing import Optional
-from datetime import datetime
+"""User profile (single-user: Gahan), DB-backed."""
+
+from typing import Optional, List
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_current_user
+from app.core.database import get_db
+from app.models.models import User
 
 router = APIRouter()
 
-class UserProfile(BaseModel):
-    id: int
-    email: str
-    full_name: str
-    age: Optional[int] = None
-    height: Optional[float] = None  # in cm
-    weight: Optional[float] = None  # in kg
-    fitness_goal: Optional[str] = None
-    experience_level: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
 
 class UserProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     age: Optional[int] = None
-    height: Optional[float] = None
-    weight: Optional[float] = None
-    fitness_goal: Optional[str] = None
+    height_cm: Optional[float] = None
+    weight_kg: Optional[float] = None
+    goals: Optional[str] = None
     experience_level: Optional[str] = None
+    protein_target_g: Optional[int] = None
+    football_day: Optional[str] = None
+    weekly_split: Optional[List[str]] = None
 
-@router.get("/profile", response_model=UserProfile, summary="Get User Profile", description="Retrieve the current user's profile information")
-async def get_user_profile():
-    """
-    Get user profile
-    
-    Returns the current user's profile information including personal details and fitness preferences
-    """
-    # TODO: Implement user profile retrieval from database
-    # This would typically require authentication to get the current user
+
+def _serialize(u: User):
     return {
-        "id": 1,
-        "email": "user@example.com",
-        "full_name": "John Doe",
-        "age": 28,
-        "height": 175.0,
-        "weight": 70.0,
-        "fitness_goal": "Build muscle",
-        "experience_level": "intermediate",
-        "created_at": "2024-01-01T10:00:00",
-        "updated_at": "2024-01-01T10:00:00"
+        "id": u.id,
+        "email": u.email,
+        "full_name": u.full_name,
+        "location": u.location,
+        "age": u.age,
+        "height_cm": u.height_cm,
+        "weight_kg": u.weight_kg,
+        "gym_days_per_week": u.gym_days_per_week,
+        "football_day": u.football_day,
+        "goals": u.goals,
+        "experience_level": u.experience_level,
+        "protein_target_g": u.protein_target_g,
+        "weekly_split": u.weekly_split,
     }
 
-@router.put("/profile", response_model=UserProfile, summary="Update User Profile", description="Update the current user's profile information")
-async def update_user_profile(profile_update: UserProfileUpdate):
-    """
-    Update user profile
-    
-    - **full_name**: User's full name
-    - **age**: User's age
-    - **height**: User's height in cm
-    - **weight**: User's weight in kg
-    - **fitness_goal**: User's fitness goal (build muscle, lose weight, etc.)
-    - **experience_level**: User's fitness experience level
-    
-    Returns the updated profile information
-    """
-    # TODO: Implement user profile update in database
-    # This would typically require authentication to get the current user
-    
-    # Simulate updating the profile
-    updated_profile = {
-        "id": 1,
-        "email": "user@example.com",
-        "full_name": profile_update.full_name or "John Doe",
-        "age": profile_update.age or 28,
-        "height": profile_update.height or 175.0,
-        "weight": profile_update.weight or 70.0,
-        "fitness_goal": profile_update.fitness_goal or "Build muscle",
-        "experience_level": profile_update.experience_level or "intermediate",
-        "created_at": "2024-01-01T10:00:00",
-        "updated_at": "2024-01-01T12:00:00"
-    }
-    
-    return updated_profile
+
+@router.get("/profile")
+def get_user_profile(user: User = Depends(get_current_user)):
+    return _serialize(user)
+
+
+@router.put("/profile")
+def update_user_profile(
+    body: UserProfileUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(user, field, value)
+    db.commit()
+    db.refresh(user)
+    return _serialize(user)

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
-import { Home, Dumbbell, User, Calendar, Target } from 'lucide-react';
+import { MessageCircle, TrendingUp, User, Salad, HeartPulse, CalendarCheck } from 'lucide-react';
 
 const SidebarContainer = styled.aside`
   width: 250px;
@@ -51,10 +51,11 @@ const Sidebar = () => {
   const location = useLocation();
 
   const navItems = [
-    { path: '/', icon: Home, label: 'Home' },
-    { path: '/dashboard', icon: Target, label: 'Dashboard' },
-    { path: '/workouts', icon: Dumbbell, label: 'Workouts' },
-    { path: '/calendar', icon: Calendar, label: 'Calendar' },
+    { path: '/', icon: CalendarCheck, label: 'Today' },
+    { path: '/coach', icon: MessageCircle, label: 'Coach' },
+    { path: '/progress', icon: TrendingUp, label: 'Progress' },
+    { path: '/nutrition', icon: Salad, label: 'Nutrition' },
+    { path: '/recovery', icon: HeartPulse, label: 'Recovery' },
     { path: '/profile', icon: User, label: 'Profile' },
   ];
 

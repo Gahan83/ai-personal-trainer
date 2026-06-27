@@ -1,153 +1,115 @@
 # AI Personal Trainer
 
-An intelligent fitness application that provides personalized workout plans and guidance using AI technology.
+An always-on, personalized AI gym & fitness coach built to the PRD for **Gahan**
+— 4× gym/week, 1× football, 2 rest days, and a set of hard training constraints
+the agent never violates.
 
-## Tech Stack
+It is a *proactive agent*, not just a plan generator: it suggests the day's
+workout, adapts to a 30-second readiness check-in, tracks lifts and surfaces
+PRs/plateaus, gives conversational guidance, and nudges nutrition/recovery.
 
-### Backend
-- **Python 3.8+**
-- **FastAPI** - Modern, fast web framework for building APIs
-- **SQLAlchemy** - SQL toolkit and ORM
-- **Alembic** - Database migration tool
-- **Pydantic** - Data validation using Python type annotations
-- **Redis** - In-memory data structure store
-- **Celery** - Distributed task queue
+## Hard constraints (enforced in code, not just prompts)
 
-### Frontend
-- **React 18** - JavaScript library for building user interfaces
-- **React Router** - Declarative routing for React
-- **Styled Components** - CSS-in-JS styling solution
-- **React Query** - Data fetching and caching library
-- **React Hook Form** - Performant, flexible forms
-- **Axios** - HTTP client for API requests
-- **Lucide React** - Beautiful & consistent icon toolkit
+1. **No abs/core work — ever** (warm-ups, finishers, or any suggestion).
+2. **Football is a training day** — never a gym session the same day.
+3. At least **one full rest day between back-to-back hard sessions**.
+4. **No leg day the day before football.**
+5. All programming is **non-competitive** — physique, strength, longevity.
 
-## Project Structure
+> Note: the PRD's illustrative split placed legs the day before football, which
+> violates constraint #4. The default split shifts legs to Tuesday so it is
+> constraint-clean: `push · legs · rest · pull · football · upper · rest`.
+
+These live in [`backend/app/services/trainer.py`](backend/app/services/trainer.py)
+and are validated on every plan, every logged set, and every AI response.
+
+## Feature → version map (from the PRD)
+
+| Feature | Version | Where |
+|---|---|---|
+| Daily workout suggestion | V1 | `GET /agent/today` |
+| Conversational guidance | V1 | `POST /agent/chat` |
+| Progress tracking (PRs, volume, plateaus) | V1 | `GET /workouts/progress` |
+| Football-day awareness | V1 | planner in `trainer.py` |
+| Adaptive recovery engine (check-in) | V2 | `POST /checkin/` → reshapes `/agent/today` |
+| Nutrition & hydration nudges | V2 | `/nutrition/*` |
+| Wearable / health data sync | V3 | `/wearables/*` (manual ingest + recovery score) |
+
+## Tech stack
+
+- **Backend:** FastAPI · SQLAlchemy · SQLite · Azure OpenAI (`openai` SDK)
+- **Frontend:** React 18 · React Router · styled-components · axios · react-hot-toast
+
+## Architecture
 
 ```
-ai-personal-trainer/
-├── backend/                 # Python FastAPI backend
-│   ├── app/
-│   │   ├── api/            # API routes and endpoints
-│   │   │   └── endpoints/  # Individual endpoint modules
-│   │   ├── core/           # Core functionality (config, security)
-│   │   ├── models/         # Database models
-│   │   ├── services/       # Business logic services
-│   │   └── utils/         # Utility functions
-│   ├── tests/              # Test files
-│   ├── docs/               # Documentation
-│   ├── requirements.txt    # Python dependencies
-│   └── env.example         # Environment variables template
-├── frontend/               # React frontend
-│   ├── public/             # Static files
-│   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── pages/          # Page components
-│   │   ├── hooks/          # Custom React hooks
-│   │   ├── services/       # API services
-│   │   ├── styles/         # Styling and themes
-│   │   └── utils/          # Utility functions
-│   └── package.json        # Node.js dependencies
-└── README.md               # This file
+backend/app/
+  core/config.py        # settings (Azure OpenAI env vars)
+  core/database.py      # SQLAlchemy engine/session
+  core/seed.py          # create tables + seed the Gahan user
+  models/models.py      # User, WorkoutSession, SetLog, CheckIn, NutritionLog, WearableData
+  services/trainer.py   # split, no-abs exercise library, constraint engine, adaptive planner
+  services/ai_service.py# Azure OpenAI wrapper (graceful no-op without keys)
+  api/endpoints/        # agent, workouts, checkin, nutrition, wearables, users, exercises, mcp
+
+frontend/src/pages/     # Dashboard (Today), Coach (chat), Progress, Nutrition, Recovery, Profile
 ```
 
-## Features
+The app is **single-user** (Gahan = user id 1, seeded on startup). It runs fully
+offline using the deterministic planner; adding Azure OpenAI keys turns on the
+AI coach note and the conversational `/coach` chat.
 
-- **User Authentication** - Secure login and registration
-- **Personalized Workouts** - AI-generated workout plans
-- **Progress Tracking** - Monitor fitness journey
-- **Exercise Library** - Comprehensive database of exercises
-- **Dashboard** - Overview of fitness metrics
-- **Profile Management** - User profile and preferences
+## Getting started
 
-## Getting Started
+### 1. Backend
 
-### Prerequisites
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp env.example .env             # then fill in Azure OpenAI values (see below)
+uvicorn app.main:app --reload
+```
 
-- Python 3.8 or higher
-- Node.js 16 or higher
-- npm or yarn
-- Redis (optional, for background tasks)
+API at `http://localhost:8000` · docs at `http://localhost:8000/docs`.
+The SQLite DB (`ai_trainer.db`) and Gahan user are created automatically.
 
-### Backend Setup
+### 2. Azure OpenAI config (`backend/.env`)
 
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
+`.env` is git-ignored. Fill these:
 
-2. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+```
+OPENAI_API_KEY=<your-azure-openai-key>
+AZURE_OPENAI_ENDPOINT=https://<your-resource>.openai.azure.com/
+AZURE_API_VERSION=2024-06-01
+CHAT_MODEL=<your-deployment-name>     # e.g. gpt-4o-mini
+```
 
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+Without these, workout planning still works; only AI chat/coaching notes are off.
 
-4. Copy environment variables:
-   ```bash
-   cp env.example .env
-   ```
+### 3. Frontend
 
-5. Run the development server:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
+```bash
+cd frontend
+npm install
+npm start                       # http://localhost:3000
+```
 
-The API will be available at `http://localhost:8000`
+## Key endpoints
 
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the development server:
-   ```bash
-   npm start
-   ```
-
-The application will be available at `http://localhost:3000`
-
-## API Documentation
-
-Once the backend is running, you can access the interactive API documentation at:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
-
-## Development
-
-### Backend Development
-
-- Use `pytest` for running tests
-- Use `alembic` for database migrations
-- Follow PEP 8 style guidelines
-- Use type hints for better code documentation
-
-### Frontend Development
-
-- Use functional components with hooks
-- Follow React best practices
-- Use styled-components for styling
-- Implement responsive design
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+```
+GET  /api/v1/agent/today          # adaptive workout for today
+GET  /api/v1/agent/week           # weekly split + constraint check
+POST /api/v1/agent/chat           # conversational coach
+POST /api/v1/checkin/             # readiness check-in (soreness/energy)
+POST /api/v1/workouts/{id}/complete
+POST /api/v1/workouts/{id}/sets   # log a set (rejects abs exercises)
+GET  /api/v1/workouts/progress    # PRs, volume, plateau alerts
+GET  /api/v1/nutrition/nudges
+POST /api/v1/wearables/sync
+```
 
 ## License
 
-This project is licensed under the MIT License.
+MIT.

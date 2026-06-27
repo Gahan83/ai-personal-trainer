@@ -3,27 +3,30 @@ import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { GlobalStyle, theme } from './styles/theme';
 import Layout from './components/Layout';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
+import AccessGate from './components/AccessGate';
 import Dashboard from './pages/Dashboard';
-import Workouts from './pages/Workouts';
+import Coach from './pages/Coach';
+import Progress from './pages/Progress';
+import Nutrition from './pages/Nutrition';
+import Recovery from './pages/Recovery';
 import Profile from './pages/Profile';
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyle />
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/workouts" element={<Workouts />} />
+      <AccessGate>
+        <Layout>
+          <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/coach" element={<Coach />} />
+          <Route path="/progress" element={<Progress />} />
+          <Route path="/nutrition" element={<Nutrition />} />
+          <Route path="/recovery" element={<Recovery />} />
           <Route path="/profile" element={<Profile />} />
-        </Routes>
-      </Layout>
+          </Routes>
+        </Layout>
+      </AccessGate>
     </ThemeProvider>
   );
 }

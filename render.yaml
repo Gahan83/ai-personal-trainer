@@ -1,0 +1,35 @@
+# Render blueprint: FastAPI backend + managed Postgres.
+# Deploy: Render Dashboard → New → Blueprint → pick this repo.
+# Secrets (sync:false) are entered in the dashboard, never committed.
+services:
+  - type: web
+    name: ai-trainer-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.6"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ai-trainer-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ACCESS_PASSWORD
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AZURE_OPENAI_ENDPOINT
+        sync: false
+      - key: AZURE_API_VERSION
+        sync: false
+      - key: CHAT_MODEL
+        sync: false
+
+databases:
+  - name: ai-trainer-db
+    plan: free
