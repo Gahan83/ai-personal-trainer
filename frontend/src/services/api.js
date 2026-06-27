@@ -23,14 +23,14 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// On 401 the gate password is wrong/expired — clear it and reload to re-prompt.
+// On 401 the gate password is wrong/expired — clear it and let the caller
+// (AccessGate) re-prompt. Do NOT reload here: the gate's own probe returns 401
+// when a password is required, and reloading would cause an infinite loop.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem(PASSWORD_KEY);
-      if (window.location.pathname !== '/') window.location.href = '/';
-      else window.location.reload();
     }
     return Promise.reject(error);
   }
